@@ -3,6 +3,81 @@ generator client {
 }
 
 datasource db {
-  provider = "mongodb"
-  url      = env("DATABASE_URL")
+  provider  = "mongodb"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
+}
+
+model User {
+  id                String      @id @default(auto()) @map("_id") @db.ObjectId
+  googleId          String?
+  name              String
+  email             String      @unique
+  image             String
+  googleAccessToken String
+  createdAt         DateTime?   @default(now())
+  updatedAt         DateTime?   @updatedAt
+  workspace         Workspace[]
+  Member            Member[]
+}
+
+model Workspace {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  Owner     User      @relation(fields: [ownerId], references: [id])
+  ownerId   String    @db.ObjectId
+  members   Member[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  project   Project[]
+}
+
+model Member {
+  id          String     @id @default(auto()) @map("_id") @db.ObjectId
+  User        User       @relation(fields: [userId], references: [id])
+  userId      String     @db.ObjectId
+  Workspace   Workspace? @relation(fields: [workspaceId], references: [id])
+  workspaceId String?    @db.ObjectId
+  role        Role
+}
+
+enum Role {
+  YOUTUBER
+  EDITOR
+  THUMBNAILER
+}
+
+model Project {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  Workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  workspaceId String    @db.ObjectId
+  name        String
+  description String
+  video       Video[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Video {
+  id                      String   @id @default(auto()) @map("_id") @db.ObjectId
+  title                   String
+  description             String
+  keywords                String[]
+  tags                    String[]
+  category                String
+  defaultLanguage         String
+  privacyStatus           String
+  embeddable              Boolean?
+  license                 String?
+  publishAt               DateTime
+  thumbnail               String?
+  selfDeclaredMadeForKids Boolean?
+  url                     String?
+  duration                Int?
+  channelId               String?
+  uploadStatus            String
+  failureReason           String?
+  isApproved              Boolean?
+  Project                 Project  @relation(fields: [projectId], references: [id])
+  projectId               String   @db.ObjectId
 }
