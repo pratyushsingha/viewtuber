@@ -9,16 +9,15 @@ datasource db {
 }
 
 model User {
-  id                String      @id @default(auto()) @map("_id") @db.ObjectId
-  googleId          String?
-  name              String
-  email             String      @unique
-  image             String
-  googleAccessToken String
-  createdAt         DateTime?   @default(now())
-  updatedAt         DateTime?   @updatedAt
-  workspace         Workspace[]
-  Member            Member[]
+  id        String      @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String
+  name      String
+  email     String      @unique
+  image     String
+  createdAt DateTime?   @default(now())
+  updatedAt DateTime?   @updatedAt
+  workspace Workspace[]
+  Member    Member[]
 }
 
 model Workspace {
