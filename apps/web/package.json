@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@clerk/nextjs": "^5.7.5",
     "@prisma/client": "^5.21.0",
     "@prisma/extension-accelerate": "^1.2.1",
     "@repo/ui": "*",
@@ -16,7 +17,8 @@
     "next": "^14.0.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-native-web": "^0.19.10"
+    "react-native-web": "^0.19.10",
+    "svix": "^1.37.0"
   },
   "devDependencies": {
     "@repo/typescript-config": "*",
