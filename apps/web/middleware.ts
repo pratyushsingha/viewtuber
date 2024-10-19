@@ -1,7 +1,6 @@
 import {
   authMiddleware,
   clerkClient,
-  redirectToSignIn,
 } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
@@ -22,7 +21,6 @@ export default authMiddleware({
     if (auth.userId) {
       try {
         const user = await clerkClient.users.getUser(auth.userId);
-        console.log(user);
         const role = user.publicMetadata.role as string | undefined;
 
         if (role === "youtuber" && request.nextUrl.pathname === "/dashboard") {
@@ -43,6 +41,30 @@ export default authMiddleware({
               role === "youtuber" ? "/youtube/dashboard" : "/dashboard",
               request.url
             )
+          );
+        }
+        if (
+          role === "editor" &&
+          request.nextUrl.pathname.startsWith("/api/youtube/dashboard")
+        ) {
+          return NextResponse.json(
+            {
+              success: false,
+              message: "U don't have permission to perform this operation",
+            },
+            { status: 401 }
+          );
+        }
+        if (
+          role === "youtuber" &&
+          request.nextUrl.pathname.startsWith("/api/dashboard")
+        ) {
+          return NextResponse.json(
+            {
+              success: false,
+              message: "U don't have permission to perform this operation",
+            },
+            { status: 401 }
           );
         }
         return NextResponse.next();
