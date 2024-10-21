@@ -19,26 +19,18 @@ model User {
   workspace Workspace[]
   Member    Member[]
   role      Role?
+  Project   Project[]
 }
 
 model Workspace {
-  id        String    @id @default(auto()) @map("_id") @db.ObjectId
-  name      String    @unique
-  Owner     User      @relation(fields: [ownerId], references: [userId])
-  ownerId   String
-  members   Member[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  project   Project[]
-}
-
-model Member {
-  id          String     @id @default(auto()) @map("_id") @db.ObjectId
-  User        User       @relation(fields: [userId], references: [userId])
-  userId      String
-  Workspace   Workspace? @relation(fields: [workspaceId], references: [id])
-  workspaceId String?    @db.ObjectId
-  role        Role
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  name        String    @unique
+  description String?
+  Owner       User      @relation(fields: [ownerId], references: [userId])
+  ownerId     String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  projects    Project[]
 }
 
 enum Role {
@@ -50,11 +42,33 @@ model Project {
   id          String    @id @default(auto()) @map("_id") @db.ObjectId
   Workspace   Workspace @relation(fields: [workspaceId], references: [id])
   workspaceId String    @db.ObjectId
+  Owner       User      @relation(fields: [ownerId], references: [userId])
+  ownerId     String
   name        String    @unique
-  description String
-  video       Video[]
+  description String?   @default("")
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  Video       Video[]
+  members     Member[]
+}
+
+model Member {
+  id               String        @id @default(auto()) @map("_id") @db.ObjectId
+  User             User?         @relation(fields: [userId], references: [userId])
+  userId           String?
+  email            String?
+  role             Role
+  Project          Project       @relation(fields: [projectId], references: [id])
+  projectId        String        @db.ObjectId
+  status           MemberStatus?
+  inviteCode       String?
+  inviteCodeExpiry DateTime?
+}
+
+enum MemberStatus {
+  pending
+  accepted
+  rejected
 }
 
 model Video {
