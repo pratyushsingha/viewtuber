@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { prisma } from "../../../../prisma";
+import { prisma } from "../../../../lib/prisma";
 
 export async function POST(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -42,13 +42,6 @@ export async function POST(request: Request) {
       data: {
         name: name,
         ownerId: userId,
-      },
-    });
-    await prisma.member.create({
-      data: {
-        userId: userId,
-        workspaceId: workspace.id,
-        role: "youtuber",
       },
     });
     return NextResponse.json(
@@ -210,20 +203,10 @@ export async function GET(request: Request) {
   const limit = parseInt(searchParams.get("limit") || "12");
   const skip = (page - 1) * limit;
 
-  const { userId, sessionClaims } = auth();
+  const { userId } = auth();
   if (!userId) {
     return NextResponse.json(
       { success: false, message: "Unauthorized" },
-      { status: 401 }
-    );
-  }
-  const role = sessionClaims?.metadata?.role;
-  if (role !== "youtuber") {
-    return NextResponse.json(
-      {
-        success: false,
-        message: "U don't have permissioon to update an organization",
-      },
       { status: 401 }
     );
   }
@@ -241,15 +224,12 @@ export async function GET(request: Request) {
             email: true,
           },
         },
-        members: {
+        projects: {
           select: {
-            User: {
-              select: {
-                id: true,
-                email: true,
-              },
-            },
-            role: true,
+            id: true,
+            name: true,
+            description: true,
+            workspaceId: true,
           },
         },
       },
