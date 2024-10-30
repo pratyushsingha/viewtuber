@@ -1,47 +1,35 @@
-import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
+import { auth } from "../../../../auth";
 
 export async function POST(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const workspaceId = searchParams.get("workspaceid");
   const { name: projectName, description } = await request.json();
 
-  const { userId } = auth();
-  if (!userId) {
+  const session = await auth();
+  if (!session) {
     return NextResponse.json(
       { success: false, message: "Unauthorized" },
       { status: 401 }
     );
   }
 
-  if (!workspaceId || !projectName) {
+  if (!projectName) {
     return NextResponse.json(
       {
         success: false,
-        message: "Workspace ID or Project name is missing",
+        message: "Project name is missing",
       },
       {
         status: 400,
       }
     );
   }
+  const user = session.user;
   try {
-    const workspaceExists = await prisma.workspace.findUnique({
-      where: {
-        id: workspaceId,
-      },
-    });
-    if (!workspaceExists) {
-      return NextResponse.json(
-        { success: false, message: "Workspace not found" },
-        { status: 400 }
-      );
-    }
     const projectExists = await prisma.project.findUnique({
       where: {
         name: projectName,
-        workspaceId: workspaceId,
+        ownerId: user.id,
       },
     });
     if (projectExists) {
@@ -50,28 +38,21 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    const user = await prisma.user.findUnique({
-      where: {
-        userId,
-      },
-    });
 
-    
     const project = await prisma.project.create({
       data: {
         name: projectName,
-        workspaceId: workspaceId,
         description: description ?? null,
-        ownerId: userId,
+        ownerId: user.id as string,
       },
     });
     await prisma.member.create({
       data: {
-        userId: userId,
+        userId: session.user.id,
         projectId: project.id,
         role: "youtuber",
         status: "accepted",
-        email: user?.email,
+        email: user.email,
       },
     });
     return NextResponse.json({
@@ -91,21 +72,23 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   const { searchParams } = new URL(request.url);
   const projectId = searchParams.get("projectId");
-  const projectName = searchParams.get("projectName");
+  const { name: projectName, description } = await request.json();
 
-  const { userId } = auth();
-  if (!userId) {
+  const session = await auth();
+  if (!session) {
     return NextResponse.json(
       { success: false, message: "Unauthorized" },
       { status: 401 }
     );
   }
+
   if (!projectId || !projectName) {
     return NextResponse.json(
       { success: false, message: "Project ID or Project name is missing" },
       { status: 400 }
     );
   }
+  const user = session.user;
   try {
     const project = await prisma.project.findUnique({
       where: {
@@ -119,7 +102,7 @@ export async function PUT(request: Request) {
         { status: 400 }
       );
     }
-    if (project.ownerId !== userId) {
+    if (project.ownerId !== user.id) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
         { status: 401 }
@@ -131,6 +114,7 @@ export async function PUT(request: Request) {
       },
       data: {
         name: projectName,
+        description: description ?? null,
       },
     });
     return NextResponse.json({
@@ -151,8 +135,8 @@ export async function DELETE(request: Request) {
   const { searchParams } = new URL(request.url);
   const projectId = searchParams.get("projectId");
 
-  const { userId } = auth();
-  if (!userId) {
+  const session = await auth();
+  if (!session) {
     return NextResponse.json(
       { success: false, message: "Unauthorized" },
       { status: 401 }
@@ -164,6 +148,8 @@ export async function DELETE(request: Request) {
       { status: 400 }
     );
   }
+  const user = session.user;
+
   try {
     const project = await prisma.project.findUnique({
       where: {
@@ -177,7 +163,7 @@ export async function DELETE(request: Request) {
         { status: 400 }
       );
     }
-    if (project.ownerId !== userId) {
+    if (project.ownerId !== user.id) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
         { status: 401 }
@@ -206,8 +192,8 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const projectId = searchParams.get("projectId");
 
-  const { userId } = auth();
-  if (!userId) {
+  const session = await auth();
+  if (!session) {
     return NextResponse.json(
       { success: false, message: "Unauthorized" },
       { status: 401 }
@@ -219,25 +205,13 @@ export async function GET(request: Request) {
       { status: 400 }
     );
   }
+  const user = session.user;
   try {
     const project = await prisma.project.findFirst({
       where: {
         id: projectId,
       },
       include: {
-        Workspace: {
-          select: {
-            id: true,
-            name: true,
-            description: true,
-            Owner: {
-              select: {
-                id: true,
-                email: true,
-              },
-            },
-          },
-        },
         members: {
           select: {
             userId: true,

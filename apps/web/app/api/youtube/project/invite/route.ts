@@ -1,8 +1,8 @@
-import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { prisma } from "../../../../../lib/prisma";
 import { resend } from "../../../../../lib/resend";
 import ProjectInviteEmail from "../../../../../emails/ProjectInviteEmail";
+import { auth } from "../../../../../auth";
 
 import { nanoid } from "nanoid";
 
@@ -11,8 +11,8 @@ export async function POST(request: Request) {
   const projectId = searchParams.get("projectId");
   const { email, role } = await request.json();
 
-  const { userId } = auth();
-  if (!userId) {
+  const session = await auth();
+  if (!session) {
     return NextResponse.json(
       { success: false, message: "Unauthorized" },
       { status: 401 }

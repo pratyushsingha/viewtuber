@@ -1,14 +1,15 @@
 import { prisma } from "../../../../lib/prisma";
-import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { auth } from "../../../../auth";
+
 import { Role } from "@prisma/client";
 
-export async function POST(request: Request) {
+export async function PUT(request: Request) {
   const { searchParams } = new URL(request.url);
   const role = searchParams.get("role");
 
-  const { userId } = auth();
-  if (!userId) {
+  const session = await auth();
+  if (!session) {
     return NextResponse.json(
       { success: false, message: "Unauthorized" },
       {
@@ -18,25 +19,16 @@ export async function POST(request: Request) {
   }
   if (!role) {
     return NextResponse.json(
-      { success: false, message: "Missing userId or role" },
+      { success: false, message: "Missing role" },
       {
         status: 400,
       }
     );
   }
-
+  const user = session.user;
   try {
-    const user = await prisma.user.findUnique({
-      where: { userId: userId },
-    });
-    if (!user) {
-      return new Response("User not found", {
-        status: 404,
-      });
-    }
-
     const updatedUser = await prisma.user.update({
-      where: { userId: userId },
+      where: { id: user.id as string },
       data: { role: role as Role },
     });
 

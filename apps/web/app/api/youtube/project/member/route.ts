@@ -1,15 +1,15 @@
-import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { prisma } from "../../../../../lib/prisma";
 import { MemberStatus } from "@prisma/client";
+import { auth } from "../../../../../auth";
 
 export async function DELETE(request: Request) {
   const { searchParams } = new URL(request.url);
   const projectId = searchParams.get("projectId");
   const memberId = searchParams.get("memberId");
 
-  const { userId } = auth();
-  if (!userId) {
+  const session = await auth();
+  if (!session) {
     return NextResponse.json(
       { success: false, message: "Unauthorized" },
       { status: 401 }
@@ -43,7 +43,7 @@ export async function DELETE(request: Request) {
       );
     }
 
-    if (project.ownerId !== userId) {
+    if (project.ownerId !== session.user.id) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
         { status: 401 }
@@ -95,8 +95,8 @@ export async function GET(request: Request) {
   const limit = parseInt(searchParams.get("limit") || "12");
   const skip = (page - 1) * limit;
 
-  const { userId } = auth();
-  if (!userId) {
+  const session = await auth();
+  if (!session) {
     return NextResponse.json(
       { success: false, message: "Unauthorized" },
       { status: 401 }

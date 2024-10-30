@@ -1,86 +1,57 @@
-import {
-  authMiddleware,
-  clerkClient,
-} from "@clerk/nextjs/server";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "./auth";
 
-const publicRoutes = [
-  "/",
-  "/sign-in(.*)",
-  "/sign-up(.*)",
-  "/api/webhooks/user",
-];
+interface AuthRequest extends NextRequest {
+  auth?: {
+    user: {
+      id?: string;
+      email: string;
+      role: "youtuber" | "editor" | undefined;
+      name: string;
+      image: string;
+    };
+    expires: number;
+  };
+}
 
-export default authMiddleware({
-  publicRoutes,
-  async afterAuth(auth, request) {
-    if (!auth.userId && !publicRoutes.includes(request.nextUrl.pathname)) {
-      return NextResponse.redirect(new URL("/sign-in", request.url));
-    }
-
-    if (auth.userId) {
-      try {
-        const user = await clerkClient.users.getUser(auth.userId);
-        const role = user.publicMetadata.role as string | undefined;
-
-        if (role === "youtuber" && request.nextUrl.pathname === "/dashboard") {
-          return NextResponse.redirect(
-            new URL("/youtube/dashboard", request.url)
-          );
-        }
-        if (
-          role !== "youtuber" &&
-          request.nextUrl.pathname.startsWith("/youtube")
-        ) {
-          return NextResponse.redirect(new URL("/dashboard", request.url));
-        }
-
-        if (publicRoutes.includes(request.nextUrl.pathname)) {
-          return NextResponse.redirect(
-            new URL(
-              role === "youtuber" ? "/youtube/dashboard" : "/dashboard",
-              request.url
-            )
-          );
-        }
-        if (
-          role === "editor" &&
-          request.nextUrl.pathname.startsWith("/api/youtube/dashboard")
-        ) {
-          return NextResponse.json(
-            {
-              success: false,
-              message: "U don't have permission to perform this operation",
-            },
-            { status: 401 }
-          );
-        }
-        if (
-          role === "youtuber" &&
-          request.nextUrl.pathname.startsWith("/api/dashboard")
-        ) {
-          return NextResponse.json(
-            {
-              success: false,
-              message: "U don't have permission to perform this operation",
-            },
-            { status: 401 }
-          );
-        }
-        return NextResponse.next();
-      } catch (error) {
-        console.error("Error fetching user", error);
-        return NextResponse.redirect(new URL("/error", request.url));
+export async function middleware(req: AuthRequest) {
+  const session = await auth();
+  if (session) {
+    if (!session.user.role && req.nextUrl.pathname !== "/role") {
+      return NextResponse.redirect(new URL("/role", req.nextUrl));
+    } else if (session.user.role) {
+      const userRole = session.user.role;
+      if (userRole === "youtuber" && req.nextUrl.pathname === "/dashboard") {
+        return NextResponse.redirect(
+          new URL("/youtube/dashboard", req.nextUrl)
+        );
+      }
+      if (
+        userRole === "editor" &&
+        req.nextUrl.pathname === "/youtube/dashboard"
+      ) {
+        return NextResponse.redirect(new URL("/dashboard", req.nextUrl));
+      }
+      if (req.nextUrl.pathname === "/") {
+        return NextResponse.redirect(
+          new URL(
+            userRole === "editor" ? "/dashboard" : "/youtube/dashboard",
+            req.nextUrl
+          )
+        );
       }
     }
-  },
-});
+  }
+  return NextResponse.next();
+}
 
 export const config = {
   matcher: [
-    // Skip Next.js internals and all static files, unless found in search params
-    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
-    // Always run for API routes
+    "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)",
+    "/",
+    "/sign-in",
     "/api/:path*",
+    "/youtube/dashboard/:path",
+    "/dahsboard/:path",
   ],
 };
