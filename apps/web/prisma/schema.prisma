@@ -9,28 +9,16 @@ datasource db {
 }
 
 model User {
-  id        String      @id @default(auto()) @map("_id") @db.ObjectId
-  userId    String      @unique
-  name      String
-  email     String      @unique
-  image     String
-  createdAt DateTime?   @default(now())
-  updatedAt DateTime?   @updatedAt
-  workspace Workspace[]
-  Member    Member[]
-  role      Role?
-  Project   Project[]
-}
-
-model Workspace {
-  id          String    @id @default(auto()) @map("_id") @db.ObjectId
-  name        String    @unique
-  description String?
-  Owner       User      @relation(fields: [ownerId], references: [userId])
-  ownerId     String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  projects    Project[]
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  name          String
+  email         String    @unique
+  image         String
+  createdAt     DateTime? @default(now())
+  updatedAt     DateTime? @updatedAt
+  access_token  String?
+  Member        Member[]
+  role          Role?
+  Project       Project[]
 }
 
 enum Role {
@@ -39,23 +27,21 @@ enum Role {
 }
 
 model Project {
-  id          String    @id @default(auto()) @map("_id") @db.ObjectId
-  Workspace   Workspace @relation(fields: [workspaceId], references: [id])
-  workspaceId String    @db.ObjectId
-  Owner       User      @relation(fields: [ownerId], references: [userId])
-  ownerId     String
-  name        String    @unique
-  description String?   @default("")
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  Owner       User     @relation(fields: [ownerId], references: [id])
+  ownerId     String   @db.ObjectId
+  name        String   @unique
+  description String?  @default("")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   Video       Video[]
   members     Member[]
 }
 
 model Member {
   id               String        @id @default(auto()) @map("_id") @db.ObjectId
-  User             User?         @relation(fields: [userId], references: [userId])
-  userId           String?
+  User             User?         @relation(fields: [userId], references: [id])
+  userId           String?       @db.ObjectId
   email            String?
   role             Role
   Project          Project       @relation(fields: [projectId], references: [id])
